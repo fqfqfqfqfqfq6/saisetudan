@@ -478,7 +478,8 @@ const reasonPreview = document.getElementById('reason-preview');
 const notesHint = document.getElementById('notes-hint');
 
 // 今日の日付をセット
-dateInput.value = today.toISOString().slice(0, 10);
+const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+dateInput.value = todayStr;
 
 codeInput.addEventListener('input', updatePreview);
 function updatePreview() {
