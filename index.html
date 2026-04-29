@@ -238,16 +238,19 @@
     .record-meta { font-size: 12px; color: #8e8e93; margin-top: 2px; }
     .record-notes { font-size: 12px; color: #3c3c43; margin-top: 2px; background: #f9f9f9; padding: 4px 6px; border-radius: 4px; }
     .btn-delete {
-      background: none;
-      border: none;
-      color: #ff3b30;
-      font-size: 18px;
+      background: #fff0f0;
+      border: 1.5px solid #ffcdd2;
+      color: #e53935;
+      font-size: 12px;
+      font-weight: 700;
       cursor: pointer;
-      padding: 2px 4px;
+      padding: 5px 10px;
+      border-radius: 6px;
       flex-shrink: 0;
-      line-height: 1;
+      line-height: 1.2;
+      white-space: nowrap;
     }
-    .btn-delete:active { opacity: 0.6; }
+    .btn-delete:active { background: #ffcdd2; }
 
     /* ===== CSV ===== */
     .btn-csv {
@@ -493,13 +496,30 @@ function deleteRecord(id) {
   showToast('削除しました');
 }
 
-// ===== グラフカラー =====
+// ===== グラフカラー（色相環全体をカバーする22色）=====
 const COLORS = [
-  '#1c3a5e','#2e6da4','#3498db','#52c2e6','#27ae60',
-  '#f39c12','#e67e22','#e74c3c','#9b59b6','#1abc9c',
-  '#d35400','#c0392b','#8e44ad','#16a085','#2980b9',
-  '#f1c40f','#95a5a6','#7f8c8d','#2c3e50','#bdc3c7',
-  '#e91e63','#ff5722',
+  '#e74c3c', // 赤
+  '#ff5722', // 深オレンジ
+  '#ff9800', // オレンジ
+  '#f1c40f', // 黄
+  '#cddc39', // ライム
+  '#8bc34a', // 黄緑
+  '#2ecc71', // 緑
+  '#4caf50', // ミドルグリーン
+  '#1abc9c', // ティール
+  '#26a69a', // ダークティール
+  '#00bcd4', // シアン
+  '#03a9f4', // ライトブルー
+  '#3498db', // 青
+  '#2196f3', // ミドルブルー
+  '#5c6bc0', // インディゴ
+  '#9b59b6', // 紫
+  '#7e57c2', // ミドルパープル
+  '#673ab7', // 深紫
+  '#e91e63', // ピンク
+  '#f06292', // ライトピンク
+  '#e67e22', // バーントオレンジ
+  '#795548', // ブラウン
 ];
 
 let chartInstance = null;
@@ -619,7 +639,7 @@ function renderRecordList() {
         <div class="record-meta">${formatDate(r.date)}</div>
         ${r.notes ? `<div class="record-notes">📝 ${escapeHtml(r.notes)}</div>` : ''}
       </div>
-      <button class="btn-delete" onclick="deleteRecord('${r.id}')" title="削除">×</button>
+      <button class="btn-delete" onclick="deleteRecord('${r.id}')">🗑 削除</button>
     </div>
   `).join('');
 }
