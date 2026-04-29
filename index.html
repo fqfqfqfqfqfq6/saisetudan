@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>再切断仕損理由 記録</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif;
+      background: #f2f2f7;
+      color: #1c1c1e;
+      font-size: 16px;
+    }
+
+    header {
+      background: #1c3a5e;
+      color: white;
+      padding: 16px;
+      text-align: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+    header h1 { font-size: 18px; font-weight: 700; }
+    header p { font-size: 12px; opacity: 0.8; margin-top: 2px; }
+
+    .container { max-width: 640px; margin: 0 auto; padding: 16px; }
+
+    /* ===== カード ===== */
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    }
+    .card-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #1c3a5e;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #e5e5ea;
+    }
+
+    /* ===== 入力フォーム ===== */
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .form-row.full { grid-template-columns: 1fr; }
+
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #6c6c70;
+      margin-bottom: 4px;
+    }
+
+    input[type="text"], input[type="date"], textarea, select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1.5px solid #d1d1d6;
+      border-radius: 8px;
+      font-size: 16px;
+      font-family: inherit;
+      background: #fafafa;
+      transition: border-color 0.2s;
+      -webkit-appearance: none;
+    }
+    input[type="text"]:focus, input[type="date"]:focus,
+    textarea:focus { outline: none; border-color: #1c3a5e; background: white; }
+
+    textarea { height: 64px; resize: vertical; }
+
+    #reason-preview {
+      padding: 10px 12px;
+      background: #f0f4f8;
+      border-radius: 8px;
+      font-size: 14px;
+      color: #1c3a5e;
+      min-height: 44px;
+      line-height: 1.5;
+    }
+    #reason-preview.error { color: #ff3b30; background: #fff5f5; }
+    #reason-preview.empty { color: #8e8e93; font-style: italic; }
+
+    .notes-hint {
+      font-size: 12px;
+      color: #ff9500;
+      margin-top: 4px;
+      display: none;
+    }
+    .notes-hint.visible { display: block; }
+
+    .btn-register {
+      width: 100%;
+      padding: 14px;
+      background: #1c3a5e;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 17px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 4px;
+      transition: background 0.2s, transform 0.1s;
+    }
+    .btn-register:active { background: #0f2540; transform: scale(0.98); }
+
+    /* ===== 月ナビ ===== */
+    .month-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .month-nav button {
+      width: 40px; height: 40px;
+      background: #f2f2f7;
+      border: 1.5px solid #d1d1d6;
+      border-radius: 8px;
+      font-size: 18px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.2s;
+    }
+    .month-nav button:disabled { opacity: 0.3; cursor: default; }
+    .month-nav button:not(:disabled):active { background: #e5e5ea; }
+    .month-nav .month-label {
+      font-size: 17px;
+      font-weight: 700;
+      color: #1c3a5e;
+    }
+
+    /* ===== 統計 ===== */
+    .stats-total {
+      text-align: center;
+      font-size: 14px;
+      color: #6c6c70;
+      margin-bottom: 12px;
+    }
+    .stats-total span {
+      font-size: 28px;
+      font-weight: 700;
+      color: #1c3a5e;
+      display: block;
+    }
+
+    .chart-container {
+      position: relative;
+      max-width: 300px;
+      margin: 0 auto 16px;
+    }
+
+    .no-data {
+      text-align: center;
+      padding: 32px 0;
+      color: #8e8e93;
+      font-size: 14px;
+    }
+
+    /* ===== 集計テーブル ===== */
+    .summary-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .summary-table th {
+      background: #f2f2f7;
+      padding: 8px 6px;
+      text-align: left;
+      font-weight: 600;
+      color: #6c6c70;
+      border-bottom: 1.5px solid #e5e5ea;
+    }
+    .summary-table td {
+      padding: 8px 6px;
+      border-bottom: 1px solid #f2f2f7;
+      vertical-align: top;
+    }
+    .summary-table tr:last-child td { border-bottom: none; }
+    .summary-table .code-cell {
+      font-weight: 700;
+      color: #1c3a5e;
+      white-space: nowrap;
+      width: 52px;
+    }
+    .summary-table .count-cell {
+      font-weight: 700;
+      color: #1c3a5e;
+      text-align: right;
+      width: 36px;
+    }
+    .summary-table .pct-cell {
+      text-align: right;
+      color: #6c6c70;
+      width: 44px;
+    }
+    .color-dot {
+      display: inline-block;
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      margin-right: 4px;
+      flex-shrink: 0;
+    }
+
+    /* ===== 記録リスト ===== */
+    .record-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 10px 0;
+      border-bottom: 1px solid #f2f2f7;
+    }
+    .record-item:last-child { border-bottom: none; }
+    .record-code {
+      background: #1c3a5e;
+      color: white;
+      border-radius: 6px;
+      padding: 4px 8px;
+      font-size: 13px;
+      font-weight: 700;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .record-body { flex: 1; min-width: 0; }
+    .record-reason { font-size: 14px; line-height: 1.4; }
+    .record-meta { font-size: 12px; color: #8e8e93; margin-top: 2px; }
+    .record-notes { font-size: 12px; color: #3c3c43; margin-top: 2px; background: #f9f9f9; padding: 4px 6px; border-radius: 4px; }
+    .btn-delete {
+      background: none;
+      border: none;
+      color: #ff3b30;
+      font-size: 18px;
+      cursor: pointer;
+      padding: 2px 4px;
+      flex-shrink: 0;
+      line-height: 1;
+    }
+    .btn-delete:active { opacity: 0.6; }
+
+    /* ===== CSV ===== */
+    .btn-csv {
+      display: block;
+      width: 100%;
+      padding: 10px;
+      background: #f2f2f7;
+      border: 1.5px solid #d1d1d6;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #1c3a5e;
+      cursor: pointer;
+      text-align: center;
+      margin-top: 8px;
+    }
+    .btn-csv:active { background: #e5e5ea; }
+
+    /* ===== Toast ===== */
+    #toast {
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: #323234;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: 600;
+      z-index: 999;
+      transition: transform 0.3s ease;
+      white-space: nowrap;
+    }
+    #toast.show { transform: translateX(-50%) translateY(0); }
+
+    @media (max-width: 400px) {
+      .form-row { grid-template-columns: 1fr; }
+      .summary-table .reason-cell { font-size: 12px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>再切断仕損理由 記録</h1>
+  <p>関西工場 フライスチーム</p>
+</header>
+
+<div class="container">
+
+  <!-- 入力フォーム -->
+  <div class="card">
+    <div class="card-title">仕損理由を登録</div>
+    <div class="form-row">
+      <div>
+        <label for="code-input">理由コード</label>
+        <input type="text" id="code-input" placeholder="例: 1, 8-①, 15" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false">
+      </div>
+      <div>
+        <label for="date-input">発生日</label>
+        <input type="date" id="date-input">
+      </div>
+    </div>
+    <div class="form-row full">
+      <div>
+        <label>理由（自動表示）</label>
+        <div id="reason-preview" class="empty">コードを入力してください</div>
+      </div>
+    </div>
+    <div class="form-row full">
+      <div>
+        <label for="notes-input">備考</label>
+        <textarea id="notes-input" placeholder="追記事項があれば入力"></textarea>
+        <p class="notes-hint" id="notes-hint">⚠️ このコードは内容の記入が必要です</p>
+      </div>
+    </div>
+    <button class="btn-register" onclick="registerRecord()">登録する</button>
+  </div>
+
+  <!-- 月別サマリー -->
+  <div class="card">
+    <div class="card-title">月別集計</div>
+    <div class="month-nav">
+      <button id="btn-prev" onclick="changeMonth(-1)">‹</button>
+      <span class="month-label" id="month-label"></span>
+      <button id="btn-next" onclick="changeMonth(1)">›</button>
+    </div>
+    <div id="summary-area"></div>
+    <button class="btn-csv" onclick="exportCSV()">📥 この月のCSVをダウンロード</button>
+  </div>
+
+  <!-- 月別記録一覧 -->
+  <div class="card">
+    <div class="card-title">記録一覧</div>
+    <div id="records-area"></div>
+  </div>
+
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ===== 仕損理由マスタ =====
+const REASONS = {
+  '1':   '寸法公差を外す（インプットミス）',
+  '2':   '寸法公差を外す（ネライはしたが予想外の仕上がり）',
+  '3':   '片面仕上げ（6F、一面機関係）',
+  '4':   'メントリの深さ違い（ダイヤル戻し忘れを含む）',
+  '5':   'メントリの部位違い',
+  '6':   'メントリ機の溝に落とす',
+  '7':   '落下',
+  '8-①': 'キズをつける（仕分け〜加工前）',
+  '8-②': '加工中のキズ',
+  '8-③': '加工後のキズ（メントリキズ含む）',
+  '8-④': '検査でのキズ',
+  '9':   '直角不良（段差あり）',
+  '10':  '直角不良（段差なし）',
+  '11':  '面粗度不良',
+  '12':  '平面度不良',
+  '13':  'セットミス（W、L面の削り残し）',
+  '14':  '反りによるT面の削り残し',
+  '15':  '機械操作ミス（加工モード、治具選択ミス等）',
+  '16':  '段取りミス（指示書記入ミス、ビニール剥がし間違い等）',
+  '17':  '加工機トラブル（内容記入）',
+  '18':  'その他（内容記入）',
+};
+const NOTES_REQUIRED = ['17', '18'];
+
+// コード正規化（半角・全角の①②③④に対応）
+const SUB_MAP = {'1':'①','2':'②','3':'③','4':'④','①':'①','②':'②','③':'③','④':'④'};
+function normalizeCode(raw) {
+  const s = raw.trim().replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0));
+  // "81"〜"84" → "8-①"〜"8-④"
+  const short = s.match(/^8([1-4])$/);
+  if (short) return '8-' + SUB_MAP[short[1]];
+  // "8-1", "8-①" など
+  const m = s.match(/^8[-－]([1-4①-④])$/);
+  if (m) return '8-' + (SUB_MAP[m[1]] || m[1]);
+  return s;
+}
+
+// ===== データ操作 =====
+const STORAGE_KEY = 'saikiDanRecords';
+function loadRecords() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+  catch { return []; }
+}
+function saveRecords(records) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+}
+function genId() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+
+// ===== 月管理 =====
+const today = new Date();
+let currentYear = today.getFullYear();
+let currentMonth = today.getMonth() + 1; // 1-indexed
+
+function changeMonth(delta) {
+  let m = currentMonth + delta;
+  let y = currentYear;
+  if (m > 12) { m = 1; y++; }
+  if (m < 1)  { m = 12; y--; }
+  currentYear = y;
+  currentMonth = m;
+  renderAll();
+}
+
+function isMonthInRange(y, m) {
+  const minDate = new Date(today.getFullYear(), today.getMonth() - 11, 1);
+  const maxDate = new Date(today.getFullYear(), today.getMonth(), 1);
+  const target = new Date(y, m - 1, 1);
+  return target >= minDate && target <= maxDate;
+}
+
+// ===== フォーム =====
+const codeInput = document.getElementById('code-input');
+const dateInput = document.getElementById('date-input');
+const reasonPreview = document.getElementById('reason-preview');
+const notesHint = document.getElementById('notes-hint');
+
+// 今日の日付をセット
+dateInput.value = today.toISOString().slice(0, 10);
+
+codeInput.addEventListener('input', updatePreview);
+function updatePreview() {
+  const code = normalizeCode(codeInput.value);
+  if (!codeInput.value.trim()) {
+    reasonPreview.textContent = 'コードを入力してください';
+    reasonPreview.className = 'empty';
+    notesHint.classList.remove('visible');
+    return;
+  }
+  const reason = REASONS[code];
+  if (reason) {
+    reasonPreview.textContent = `[${code}] ${reason}`;
+    reasonPreview.className = '';
+    notesHint.classList.toggle('visible', NOTES_REQUIRED.includes(code));
+  } else {
+    reasonPreview.textContent = '無効なコードです';
+    reasonPreview.className = 'error';
+    notesHint.classList.remove('visible');
+  }
+}
+
+function registerRecord() {
+  const rawCode = codeInput.value.trim();
+  const code = normalizeCode(rawCode);
+  const reason = REASONS[code];
+  const date = dateInput.value;
+  const notes = document.getElementById('notes-input').value.trim();
+
+  if (!reason) { showToast('有効なコードを入力してください'); return; }
+  if (!date) { showToast('日付を選択してください'); return; }
+  if (NOTES_REQUIRED.includes(code) && !notes) {
+    showToast('備考欄に内容を記入してください'); return;
+  }
+
+  const records = loadRecords();
+  records.push({ id: genId(), date, code, reason, notes });
+  saveRecords(records);
+
+  codeInput.value = '';
+  document.getElementById('notes-input').value = '';
+  updatePreview();
+  showToast('登録しました');
+
+  // 登録した日付の月を表示
+  const d = new Date(date + 'T00:00:00');
+  currentYear = d.getFullYear();
+  currentMonth = d.getMonth() + 1;
+  renderAll();
+}
+
+// ===== 削除 =====
+function deleteRecord(id) {
+  if (!confirm('この記録を削除しますか？')) return;
+  const records = loadRecords().filter(r => r.id !== id);
+  saveRecords(records);
+  renderAll();
+  showToast('削除しました');
+}
+
+// ===== グラフカラー =====
+const COLORS = [
+  '#1c3a5e','#2e6da4','#3498db','#52c2e6','#27ae60',
+  '#f39c12','#e67e22','#e74c3c','#9b59b6','#1abc9c',
+  '#d35400','#c0392b','#8e44ad','#16a085','#2980b9',
+  '#f1c40f','#95a5a6','#7f8c8d','#2c3e50','#bdc3c7',
+  '#e91e63','#ff5722',
+];
+
+let chartInstance = null;
+
+// ===== 描画メイン =====
+function renderAll() {
+  renderMonthNav();
+  renderSummary();
+  renderRecordList();
+}
+
+function renderMonthNav() {
+  document.getElementById('month-label').textContent = `${currentYear}年${currentMonth}月`;
+  const minDate = new Date(today.getFullYear(), today.getMonth() - 11, 1);
+  const maxDate = new Date(today.getFullYear(), today.getMonth(), 1);
+  const prevDate = new Date(currentYear, currentMonth - 2, 1);
+  const nextDate = new Date(currentYear, currentMonth, 1);
+  document.getElementById('btn-prev').disabled = prevDate < minDate;
+  document.getElementById('btn-next').disabled = nextDate > maxDate;
+}
+
+function getMonthRecords() {
+  const ym = `${currentYear}-${String(currentMonth).padStart(2,'0')}`;
+  return loadRecords().filter(r => r.date.startsWith(ym));
+}
+
+function renderSummary() {
+  const records = getMonthRecords();
+  const area = document.getElementById('summary-area');
+
+  if (records.length === 0) {
+    area.innerHTML = '<div class="no-data">この月の記録はありません</div>';
+    if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+    return;
+  }
+
+  // 集計
+  const counts = {};
+  records.forEach(r => { counts[r.code] = (counts[r.code] || 0) + 1; });
+  const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  const total = records.length;
+
+  // HTML構築
+  const colorMap = {};
+  sorted.forEach(([code], i) => { colorMap[code] = COLORS[i % COLORS.length]; });
+
+  let html = `<div class="stats-total"><span>${total}</span>件</div>`;
+  html += `<div class="chart-container"><canvas id="pieChart"></canvas></div>`;
+  html += `<table class="summary-table">
+    <thead><tr>
+      <th class="code-cell">コード</th>
+      <th class="reason-cell">理由</th>
+      <th class="count-cell">件数</th>
+      <th class="pct-cell">割合</th>
+    </tr></thead><tbody>`;
+  sorted.forEach(([code, count]) => {
+    const pct = Math.round(count / total * 100);
+    html += `<tr>
+      <td class="code-cell"><span class="color-dot" style="background:${colorMap[code]}"></span>${code}</td>
+      <td class="reason-cell">${REASONS[code] || code}</td>
+      <td class="count-cell">${count}</td>
+      <td class="pct-cell">${pct}%</td>
+    </tr>`;
+  });
+  html += `</tbody></table>`;
+  area.innerHTML = html;
+
+  // 円グラフ描画
+  if (chartInstance) chartInstance.destroy();
+  const ctx = document.getElementById('pieChart').getContext('2d');
+  chartInstance = new Chart(ctx, {
+    type: 'pie',
+    data: {
+      labels: sorted.map(([code]) => code),
+      datasets: [{
+        data: sorted.map(([, count]) => count),
+        backgroundColor: sorted.map(([code]) => colorMap[code]),
+        borderWidth: 2,
+        borderColor: '#fff',
+      }]
+    },
+    options: {
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { font: { size: 12 }, padding: 10, boxWidth: 14 }
+        },
+        tooltip: {
+          callbacks: {
+            label: ctx => {
+              const code = ctx.label;
+              const count = ctx.parsed;
+              const pct = Math.round(count / total * 100);
+              return ` ${REASONS[code] || code}: ${count}件 (${pct}%)`;
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+function renderRecordList() {
+  const records = getMonthRecords().sort((a, b) => b.date.localeCompare(a.date));
+  const area = document.getElementById('records-area');
+
+  if (records.length === 0) {
+    area.innerHTML = '<div class="no-data">この月の記録はありません</div>';
+    return;
+  }
+
+  area.innerHTML = records.map(r => `
+    <div class="record-item">
+      <span class="record-code">${r.code}</span>
+      <div class="record-body">
+        <div class="record-reason">${r.reason}</div>
+        <div class="record-meta">${formatDate(r.date)}</div>
+        ${r.notes ? `<div class="record-notes">📝 ${escapeHtml(r.notes)}</div>` : ''}
+      </div>
+      <button class="btn-delete" onclick="deleteRecord('${r.id}')" title="削除">×</button>
+    </div>
+  `).join('');
+}
+
+// ===== CSV エクスポート =====
+function exportCSV() {
+  const records = getMonthRecords().sort((a, b) => a.date.localeCompare(b.date));
+  if (records.length === 0) { showToast('この月の記録がありません'); return; }
+
+  const header = 'コード,理由,発生日,備考';
+  const rows = records.map(r =>
+    [r.code, `"${r.reason}"`, r.date, `"${r.notes.replace(/"/g,'""')}"`].join(',')
+  );
+  const csv = '﻿' + [header, ...rows].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `再切断記録_${currentYear}${String(currentMonth).padStart(2,'0')}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ===== ユーティリティ =====
+function formatDate(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日`;
+}
+function escapeHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+let toastTimer = null;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+// ===== 初期化 =====
+renderAll();
+</script>
+</body>
+</html>
